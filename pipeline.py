@@ -7,7 +7,6 @@ from selenium import webdriver
 
 
 def write_to_file(list):
-    print('yo')
     with open('/Users/matthewschultz/PycharmProjects/testsplit/training.csv', 'w') as csvfile:
         fieldnames = ['tag', 'validity']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
