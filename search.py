@@ -1,5 +1,5 @@
 from selenium import webdriver
-import pipeline
+
 
 def search():
     try:
@@ -10,8 +10,13 @@ def search():
         element = driver.find_element_by_xpath("//input[@class='gLFyf gsfi']")
         element.send_keys(x)
         element.submit()
-        handoff = driver.current_url
+        links = []
+        elems = driver.find_elements_by_tag_name('a')
+        for elem in elems:
+            href = elem.get_attribute('href')
+            if href is not None:
+                links.append(href)
         driver.quit()
-        return str(handoff)
-    except Exception:
+        return links
+    except Exception as e:
         print('Something went wrong!')
