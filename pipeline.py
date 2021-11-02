@@ -3,11 +3,11 @@ import numpy as np
 import pandas as pd
 import re
 import csv
-from selenium import webdriver
+from bs4 import BeautifulSoup
 
 
 def write_to_file(list):
-    with open('/Users/matthewschultz/PycharmProjects/testsplit/training.csv', 'w') as csvfile:
+    with open('/Users/matthewschultz/PycharmProjects/AutoBot/training.csv', 'w') as csvfile:
         fieldnames = ['tag', 'validity']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -33,7 +33,7 @@ def compare(dic, lis=[]):
 
 def filter_for_training(dic):
     try:
-        df = pd.read_csv('/Users/matthewschultz/PycharmProjects/testsplit/training.csv')
+        df = pd.read_csv('/Users/matthewschultz/PycharmProjects/AutoBot/training.csv')
         list1 = df.values.tolist()
         compare(dic, list1)
     except Exception:
@@ -53,10 +53,21 @@ def find_end(string):
     return index
 
 
+def find_average(values):
+    sum = 0
+    total = len(values)
+    for value in values:
+        sum = sum + value
+    return (sum / total) / 2
+
+
 def clean_dict(dic):
+    average = find_average(dic.values())
     temp = {}
     for k in dic.keys():
-        if dic.get(k) != 1:
+        rule = re.match('[A-Za-z]', k)
+        boolean = bool(rule)
+        if dic.get(k) >= average and boolean is True:
             temp.update({k: dic.get(k)})
     return temp
 
@@ -93,33 +104,47 @@ def find_tag(lis):
     return count
 
 
-def save_and_analyze(request):
-    string = str(request.content)
+def data_clean(data):
+    string = str(data.content)
     processed = string.strip().replace('\n', '')
     lis = preprocess(processed)
     count = find_tag(lis)
     cleaned_count = clean_dict(count)
-    filter_for_training(cleaned_count)
     list_comp = [(key, value) for key, value in cleaned_count.items()]
-    array = np.array(list_comp)
+    return list_comp
+
+
+def save_and_analyze(request):
+    cleaned_data = data_clean(request)
+    array = np.array(cleaned_data)
     df = pd.DataFrame(array, columns=['tags', 'count'])
-    print(df)
+    return df
 
 
-def links(request):
-    PATH = "/Users/matthewschultz/Desktop/CD/chromedriver"
-    driver = webdriver.Chrome(PATH)
-    driver.get(request)
-    links = []
-    elems = driver.find_elements_by_tag_name('a')
-    for elem in elems:
-        href = elem.get_attribute('href')
-        if href is not None:
-            links.append(href)
-    driver.quit()
+def soup(website):
+    soup = BeautifulSoup(website, "html.parser")
+    sum = soup.findChildren('div')
+    lis = []
+    for item in sum:
+        lis.append(item.get_text())
+    return lis
 
 
-def handoff(url):
-    request = r.get(url)
-    links(url)
-    save_and_analyze(request)
+# used recursion because it ha a better time efficiency relative to using a loop
+def handoff(links, i=0, websites=[]):
+    print(i)
+    if i >= len(links) - 30:
+        return websites
+    else:
+        try:
+            temp = r.get(links[i])
+            website = temp.text
+            data = soup(website)
+            websites.append(data)
+            return handoff(links, i + 1)
+        except Exception as e:
+            return handoff(links, i + 1)
+
+
+# after doing some test the time to download some of these files depends about how populated the website is
+# and the quality of the wifi connection so that it can make get request
